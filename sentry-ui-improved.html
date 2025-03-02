@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UA 571-C Remote Sentry Weapon System</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      font-family: "Courier New", monospace;
+      color: #ffff00;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .grid-compass {
+      width: 800px;
+      height: 600px;
+      background-color: #000;
+      border: 4px solid #ffff00;
+      padding: 10px;
+      position: relative;
+      box-shadow: 0 0 20px rgba(255, 255, 0, 0.6);
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 5px 0;
+      border-bottom: 2px solid #ffff00;
+    }
+    
+    .title {
+      font-size: 24px;
+      text-align: center;
+      width: 100%;
+      letter-spacing: 2px;
+    }
+    
+    .lock-icon {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 2px solid #ffff00;
+      border-radius: 50%;
+    }
+    
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 20px;
+    }
+    
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      margin-bottom: 15px;
+    }
+    
+    .control-cell {
+      border: 2px solid #ffff00;
+      text-align: center;
+    }
+    
+    .control-header {
+      font-weight: bold;
+      border-bottom: 1px solid #ffff00;
+      padding: 5px;
+      background-color: #000;
+      font-size: 14px;
+    }
+    
+    .control-options {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .control-option {
+      padding: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .control-option:hover {
+      background-color: rgba(255, 255, 0, 0.2);
+    }
+    
+    .control-option.selected {
+      background-color: #ffff00;
+      color: #000;
+    }
+    
+    .status-section {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    
+    .status-left {
+      width: 60%;
+    }
+    
+    .status-right {
+      width: 35%;
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+    }
+    
+    .rounds-display {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .rounds-label {
+      width: 150px;
+      font-size: 18px;
+    }
+    
+    .rounds-value {
+      border: 2px solid #ffff00;
+      padding: 5px 15px;
+      font-size: 32px;
+      text-align: center;
+      min-width: 100px;
+      position: relative;
+    }
+    
+    .pointer {
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-right: 15px solid #ffff00;
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    .time-display {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .time-label {
+      width: 150px;
+      font-size: 18px;
+    }
+    
+    .time-value {
+      border: 2px solid #ffff00;
+      padding: 5px 15px;
+      font-size: 32px;
+      text-align: center;
+      min-width: 100px;
+    }
+    
+    .gauge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .gauge-label {
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+    
+    .gauge-meter {
+      width: 20px;
+      height: 150px;
+      border: 2px solid #ffff00;
+      position: relative;
+    }
+    
+    .gauge-fill {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background-color: #ffff00;
+      transition: height 0.5s;
+    }
+    
+    .screen-flicker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(255, 255, 0, 0.03), rgba(255, 255, 0, 0.02));
+      opacity: 0;
+      pointer-events: none;
+      animation: flicker 5s infinite;
+    }
+    
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: rgba(255, 255, 0, 0.15);
+      animation: scanline 2s linear infinite;
+      pointer-events: none;
+    }
+    
+    @keyframes flicker {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.3; }
+    }
+    
+    @keyframes scanline {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-compass">
+    <div class="header">
+      <div class="lock-icon">A</div>
+      <div class="title">UA 571-C<br>REMOTE SENTRY WEAPON SYSTEM</div>
+      <div class="lock-icon">A</div>
+    </div>
+    
+    <div class="controls-section">
+      <div class="controls-grid">
+        <div class="control-cell">
+          <div class="control-header">SYSTEM MODE</div>
+          <div class="control-options" id="system-mode-options">
+            <div class="control-option selected" data-value="AUTO-REMOTE">AUTO-REMOTE</div>
+            <div class="control-option" data-value="MAN-OVERRIDE">MAN-OVERRIDE</div>
+            <div class="control-option" data-value="SEMI-AUTO">SEMI-AUTO</div>
+          </div>
+        </div>
+        <div class="control-cell">
+          <div class="control-header">WEAPON STATUS</div>
+          <div class="control-options" id="weapon-status-options">
+            <div class="control-option selected" data-value="SAFE">SAFE</div>
+            <div class="control-option" data-value="ARMED">ARMED</div>
+          </div>
+        </div>
+        <div class="control-cell">
+          <div class="control-header">IFF STATUS</div>
+          <div class="control-options" id="iff-status-options">
+            <div class="control-option selected" data-value="SEARCH">SEARCH</div>
+            <div class="control-option" data-value="TEST">TEST</div>
+            <div class="control-option" data-value="ENGAGED">ENGAGED</div>
+            <div class="control-option" data-value="INTERROGATE">INTERROGATE</div>
+          </div>
+        </div>
+        <div class="control-cell">
+          <div class="control-header">TEST ROUTINE</div>
+          <div class="control-options" id="test-routine-options">
+            <div class="control-option selected" data-value="AUTO">AUTO</div>
+            <div class="control-option" data-value="SELECTIVE">SELECTIVE</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="controls-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="control-cell">
+          <div class="control-header">TARGET PROFILE</div>
+          <div class="control-options" id="target-profile-options">
+            <div class="control-option selected" data-value="SOFT">SOFT</div>
+            <div class="control-option" data-value="STANDARD">STANDARD</div>
+            <div class="control-option" data-value="HARD">HARD</div>
+          </div>
+        </div>
+        <div class="control-cell">
+          <div class="control-header">SPECTRAL PROFILE</div>
+          <div class="control-options" id="spectral-profile-options">
+            <div class="control-option selected" data-value="BIO">BIO</div>
+            <div class="control-option" data-value="INERT">INERT</div>
+          </div>
+        </div>
+        <div class="control-cell">
+          <div class="control-header">TARGET SELECT</div>
+          <div class="control-options" id="target-select-options">
+            <div class="control-option selected" data-value="MULTI SPEC">MULTI SPEC</div>
+            <div class="control-option" data-value="INFRA RED">INFRA RED</div>
+            <div class="control-option" data-value="UV">UV</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="status-section">
+      <div class="status-left">
+        <div class="rounds-display">
+          <div class="rounds-label">Rounds<br>Remaining</div>
+          <div class="rounds-value">
+            <div class="pointer"></div>
+            <span id="rounds-value">500</span>
+          </div>
+        </div>
+        
+        <div class="time-display">
+          <div class="time-label">TIME AT 100%:<br>(secs)</div>
+          <div class="time-value">
+            <span id="time-value">33.33</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="status-right">
+        <div class="gauge">
+          <div class="gauge-label">Temp</div>
+          <div class="gauge-meter">
+            <div class="gauge-fill" id="temp-gauge" style="height: 30%;"></div>
+          </div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">RX/M</div>
+          <div class="gauge-meter">
+            <div class="gauge-fill" id="rxm-gauge" style="height: 0%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="scan-line"></div>
+    <div class="screen-flicker"></div>
+  </div>
+
+  <script>
+    // Set up click handlers for all control options
+    document.querySelectorAll('.control-option').forEach(option => {
+      option.addEventListener('click', function() {
+        // Deselect all options in the same group
+        const optionsGroup = this.parentElement;
+        optionsGroup.querySelectorAll('.control-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        
+        // Select the clicked option
+        this.classList.add('selected');
+        
+        // Get the value of the selected option
+        const value = this.getAttribute('data-value');
+        
+        // Simulate engagement based on selected options
+        simulateEngagement();
+      });
+    });
+    
+    // Simulate an engagement scenario
+    function simulateEngagement() {
+      const weaponStatus = document.querySelector('#weapon-status-options .selected').getAttribute('data-value');
+      const iffStatus = document.querySelector('#iff-status-options .selected').getAttribute('data-value');
+      
+      // If armed and engaged, reduce ammo and increase RXM
+      if (weaponStatus === "ARMED" && iffStatus === "ENGAGED") {
+        // Increase temperature
+        tempLevel = 60;
+        updateGauges();
+        
+        // Start reducing rounds
+        startFiring();
+      } else {
+        // Stop reducing rounds
+        stopFiring();
+        
+        // Reset RXM gauge
+        rxmLevel = 0;
+        
+        // Decrease temperature if weapon is safe
+        if (weaponStatus === "SAFE") {
+          tempLevel = 30;
+        }
+        
+        updateGauges();
+      }
+    }
+    
+    let rounds = 500;
+    let time = 33.33;
+    let tempLevel = 30;
+    let rxmLevel = 0;
+    let firingInterval;
+    
+    function startFiring() {
+      if (firingInterval) clearInterval(firingInterval);
+      
+      firingInterval = setInterval(() => {
+        rounds -= Math.floor(Math.random() * 3) + 1;
+        if (rounds <= 0) rounds = 0;
+        
+        rxmLevel = Math.min(rxmLevel + 10, 100);
+        tempLevel = Math.min(tempLevel + 5, 90);
+        
+        document.getElementById('rounds-value').textContent = rounds;
+        updateGauges();
+        
+        if (rounds <= 0) {
+          stopFiring();
+          
+          // Set weapon to SAFE
+          document.querySelectorAll('#weapon-status-options .control-option').forEach(opt => {
+            if (opt.getAttribute('data-value') === "SAFE") {
+              opt.click();
+            }
+          });
+        }
+      }, 500);
+    }
+    
+    function stopFiring() {
+      if (firingInterval) clearInterval(firingInterval);
+      
+      // Slowly reduce temp
+      let cooldownInterval = setInterval(() => {
+        tempLevel = Math.max(tempLevel - 5, 30);
+        rxmLevel = Math.max(rxmLevel - 10, 0);
+        updateGauges();
+        
+        if (tempLevel <= 30 && rxmLevel <= 0) {
+          clearInterval(cooldownInterval);
+        }
+      }, 500);
+    }
+    
+    function updateGauges() {
+      document.getElementById('temp-gauge').style.height = tempLevel + '%';
+      document.getElementById('rxm-gauge').style.height = rxmLevel + '%';
+    }
+    
+    // Add screen flicker effect
+    setInterval(() => {
+      const screenFlicker = document.querySelector('.screen-flicker');
+      screenFlicker.style.opacity = (Math.random() > 0.8) ? 0.3 : 0;
+    }, 100);
+    
+    // Add occasional slight value changes to simulate monitoring
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        time = (33 + Math.random()).toFixed(2);
+        document.getElementById('time-value').textContent = time;
+      }
+    }, 2000);
+  </script>
+</body>
+</html>
