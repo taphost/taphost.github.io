@@ -328,7 +328,39 @@
     background-color: #ffff00;
     transition: height 0.5s;
   }
-  
+    
+  @keyframes screenOn {
+    0% {
+        opacity: 1;
+        filter: brightness(3);
+        transform: scale(1.2);
+       }
+    30% {
+        opacity: 1;
+        filter: brightness(2);
+        transform: scale(1);
+        }
+    99% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 0;
+        display: none; /* Nasconde del tutto l'elemento */
+         }
+    }
+
+   .screen-effect {
+     position: fixed;
+     top: 0;
+     left: 0;
+     width: 100vw;
+     height: 100vh;
+     background: black;
+     z-index: 10000;
+     animation: screenOn 1.5s ease-out forwards;
+     pointer-events: none;
+     }
+ 
   .screen-flicker {
     position: absolute;
     top: 0;
@@ -545,6 +577,7 @@
     <div class="scan-line"></div>
     <div class="screen-flicker"></div>
     <div class="lcd-grid"></div>
+	<div class="screen-effect"></div>
   </div>
 <script>
   // Set up click handlers for all control options
