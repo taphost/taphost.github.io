@@ -164,7 +164,22 @@
 	<div class="screen-effect"></div>
   </div>
   <script src="js/script.js"></script> <!-- Collega il file JavaScript esterno -->
-  <audio id="screenon-sound" src="sounds/screenon.opus" preload="auto"></audio>
-  <audio id="noiseloop-sound" src="sounds/noiseloop.opus" preload="auto" loop></audio>
+<audio id="screenon-sound" src="sounds/screenon.opus" preload="auto"></audio>
+<audio id="noiseloop-sound" src="sounds/noiseloop.opus" preload="auto" loop></audio>
+
+<script>
+  window.onload = function() {
+    var screenonSound = document.getElementById('screenon-sound');
+    var noiseLoopSound = document.getElementById('noiseloop-sound');
+    
+    // Riproduci il suono di startup
+    screenonSound.play();
+
+    // Quando il suono di startup finisce, inizia a riprodurre 'noiseloop.opus' in loop
+    screenonSound.onended = function() {
+      noiseLoopSound.play(); // Riproduce il suono in loop
+    };
+  };
+</script>
 </body>
 </html>
