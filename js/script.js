@@ -1,4 +1,3 @@
-<script>
   // Set up click handlers for all control options
   document.querySelectorAll('.control-option').forEach(option => {
     option.addEventListener('click', function() {
@@ -355,4 +354,3 @@
 
   // Initialize scan line color based on default target select
   updateScanLineColor(document.querySelector('#target-select-options .selected').getAttribute('data-value'));
-</script>
