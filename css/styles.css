@@ -293,7 +293,7 @@
   .gauge-tick.middletop {
     width: 20px;
 	height: 2px;
-    margin-left: -5;
+    margin-left: -5px;
   }
   
   .gauge-tick.short {
