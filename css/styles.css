@@ -1,6 +1,6 @@
   @font-face {
     font-family: 'VCROSDMono';
-    src: url('/fonts/VCROSDMono.woff2') format('woff2');
+    src: url('fonts/VCROSDMono.woff2') format('woff2');
     font-weight: normal;
     font-style: normal; 
   }
@@ -184,43 +184,37 @@
   }
   
   .critical-warning {
-    border: 4px solid #ffff00;
-    background-color: #000;
-    padding: 10px 20px;
-    font-size: 50px;
-    font-weight: bold;
-    text-align: center;
-    margin: 0 auto;
-    width: 300px;
-    margin-left: 20px;
-    margin-bottom: 20px;
-    margin-top: 50px;
-    position: absolute;
-    display: none;
-    left: 80px;
-    top: 95px;
-  }
+	margin-left: 200px;
+	margin-top: 10px;
+	position: absolute;
+	z-index: 2;
+	padding: 2px 5px;
+	font-size: 70px;
+	border: 6px solid #ffff00;
+	background-color: transparent;
+	color: #ffff00;
+	cursor: pointer;
+	animation: critical-blink 1.5s infinite steps(1);
+	display: none;
+	}
+
+	@keyframes critical-blink {
+	0%, 100% {
+	color: #ffff00;
+	border: 8px solid #ffff00;
+	background-color: transparent;
+	box-shadow: none;
+	}
+	50% {
+		color: #000;
+		border: 8px solid #000;
+		background-color: #ffff00;
+		box-shadow: 0 0 0 8px #ffff00;
+	  }
+	}
+	  
   
-  .critical-text {
-    position: relative;
-    z-index: 2;
-  }
-  
-  .critical-highlight {
-    background-color: #ffff00;
-    color: #000;
-    padding: 5px 10px;
-  }
-  
-  .critical-outer-border {
-    position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
-    border: 4px solid #ffff00;
-    display: none;
-  }
+
   
   .time-display {
     display: flex;
@@ -393,8 +387,8 @@
     height: 100%;
     background-image: repeating-linear-gradient(0deg, rgba(255, 255, 0, 0.2) 0px, transparent 1px, transparent 3px),
                       repeating-linear-gradient(90deg, rgba(255, 255, 0, 0.2) 0px, transparent 1px, transparent 3px),
-		      repeating-linear-gradient(90deg, rgba(0, 0, 255, 0.2) 0px, transparent 1px, transparent 3px),
-		      repeating-linear-gradient(0deg, rgba(0, 0, 255, 0.2) 0px, transparent 1px, transparent 3px);
+		              repeating-linear-gradient(90deg, rgba(0, 0, 255, 0.2) 0px, transparent 1px, transparent 3px),
+		              repeating-linear-gradient(0deg, rgba(0, 0, 255, 0.2) 0px, transparent 1px, transparent 3px);
     background-size: 3px 3px;
     pointer-events: none;
 	z-index: 9999;
