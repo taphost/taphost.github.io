@@ -1,28 +1,38 @@
-  // Set up click handlers for all control options
-  document.querySelectorAll('.control-option').forEach(option => {
-    option.addEventListener('click', function() {
-      // Deselect all options in the same group
-      const optionsGroup = this.parentElement;
-      optionsGroup.querySelectorAll('.control-option').forEach(opt => {
-        opt.classList.remove('selected');
-      });
-      
-      // Select the clicked option
-      this.classList.add('selected');
-      
-      // Check if TEST mode was selected
-      if (this.getAttribute('data-value') === 'TEST' && 
-          optionsGroup.id === 'iff-status-options') {
-        runTestSequence();
-      } else if (optionsGroup.id === 'target-select-options') {
-        // Handle scan line color change based on target select
-        updateScanLineColor(this.getAttribute('data-value'));
-      } else {
-        // Otherwise simulate engagement based on selected options
-        simulateEngagement();
-      }
+// Add this at the top of your script, after other variable declarations
+let buttonClickSound = new Audio('sounds/buttonclick.opus');
+
+// Modify the existing click handler to play sound
+document.querySelectorAll('.control-option').forEach(option => {
+  option.addEventListener('click', function() {
+    // Play button click sound
+    buttonClickSound.currentTime = 0; // Reset to start to allow rapid clicking
+    buttonClickSound.play().catch(error => {
+      console.warn('Error playing button click sound:', error);
     });
+
+    // Existing click handler code continues...
+    // Deselect all options in the same group
+    const optionsGroup = this.parentElement;
+    optionsGroup.querySelectorAll('.control-option').forEach(opt => {
+      opt.classList.remove('selected');
+    });
+    
+    // Select the clicked option
+    this.classList.add('selected');
+    
+    // Check if TEST mode was selected
+    if (this.getAttribute('data-value') === 'TEST' && 
+        optionsGroup.id === 'iff-status-options') {
+      runTestSequence();
+    } else if (optionsGroup.id === 'target-select-options') {
+      // Handle scan line color change based on target select
+      updateScanLineColor(this.getAttribute('data-value'));
+    } else {
+      // Otherwise simulate engagement based on selected options
+      simulateEngagement();
+    }
   });
+});
 
   // Update the CSS for LCD grid and scan line
   const scanLine = document.querySelector('.scan-line');
