@@ -1,6 +1,6 @@
 // Add this at the top of your script, after other variable declarations
 let buttonClickSound = new Audio('sounds/buttonclick.opus');
-let criticalWarningSound = new Audio('sounds/multibip.opus');
+let criticalWarningSound = new Audio('sounds/bip.opus');
 
 // Modify the existing click handler to play sound
 document.querySelectorAll('.control-option').forEach(option => {
@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (!document.getElementById('critical-warning-sound')) {
     const criticalSoundElement = document.createElement('audio');
     criticalSoundElement.id = 'critical-warning-sound';
-    criticalSoundElement.src = 'sounds/multibip.opus';
+    criticalSoundElement.src = 'sounds/bip.opus';
     criticalSoundElement.preload = 'auto';
     document.body.appendChild(criticalSoundElement);
   }
