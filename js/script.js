@@ -1,6 +1,7 @@
 // Add this at the top of your script, after other variable declarations
 let buttonClickSound = new Audio('sounds/buttonclick.opus');
 let criticalWarningSound = new Audio('sounds/bip.opus');
+let currentSpectralProfile = "BIO"; // Default value, assuming BIO is the default
 
 // Modify the existing click handler to play sound
 document.querySelectorAll('.control-option').forEach(option => {
@@ -41,18 +42,24 @@ const scanLine = document.querySelector('.scan-line');
 function updateScanLineColor(targetSelect) {
   const scanLine = document.querySelector('.scan-line');
   
+  // If current spectral profile is INERT, keep scan line hidden regardless of target select
+  if (currentSpectralProfile === "INERT") {
+    scanLine.style.display = 'none';
+    return;
+  }
+  
+  // Otherwise, show scan line with appropriate color
+  scanLine.style.display = 'block';
+  
   switch(targetSelect) {
     case "INFRA RED":
       scanLine.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
-      scanLine.style.display = 'block'; // Ensure visible
       break;
     case "UV":
       scanLine.style.backgroundColor = 'rgba(138, 43, 226, 0.3)'; // Violet color
-      scanLine.style.display = 'block'; // Ensure visible
       break;
     default: // MULTI SPEC
       scanLine.style.backgroundColor = 'rgba(255, 255, 0, 0.3)'; // Yellow (default)
-      scanLine.style.display = 'block'; // Ensure visible
       break;
   }
 }
@@ -62,16 +69,16 @@ function updateScanLineColor(targetSelect) {
 function handleSpectralProfileSelection() {
   document.querySelectorAll('#spectral-profile-options .control-option').forEach(option => {
     option.addEventListener('click', function() {
-      const spectralProfile = this.getAttribute('data-value');
+      // Update current spectral profile global variable
+      currentSpectralProfile = this.getAttribute('data-value');
+      
+      // Apply scan line visibility based on current spectral profile
       const scanLine = document.querySelector('.scan-line');
       
-      // Toggle scan line visibility based on selection
-      if (spectralProfile === "INERT") {
+      if (currentSpectralProfile === "INERT") {
         scanLine.style.display = 'none'; // Hide scan line
-      } else if (spectralProfile === "BIO") {
-        scanLine.style.display = 'block'; // Show scan line
-        
-        // Apply current color based on target select
+      } else if (currentSpectralProfile === "BIO") {
+        // Get current target select and update scan line
         const currentTargetSelect = document.querySelector('#target-select-options .selected').getAttribute('data-value');
         updateScanLineColor(currentTargetSelect);
       }
@@ -79,14 +86,24 @@ function handleSpectralProfileSelection() {
   });
 }
 
-// Call the new function to initialize event listeners
+
+// Initialize the current spectral profile on page load
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize existing audio elements
-  /* ... existing code ... */
+  // Get the initially selected spectral profile
+  const initialSpectralProfile = document.querySelector('#spectral-profile-options .selected');
+  if (initialSpectralProfile) {
+    currentSpectralProfile = initialSpectralProfile.getAttribute('data-value');
+  }
   
   // Initialize the spectral profile handlers
   handleSpectralProfileSelection();
+  
+  // Initialize scan line based on current settings
+  const currentTargetSelect = document.querySelector('#target-select-options .selected').getAttribute('data-value');
+  updateScanLineColor(currentTargetSelect);
 });
+
+
 
 
 // System variables
