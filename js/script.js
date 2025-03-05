@@ -1,6 +1,6 @@
 // Add this at the top of your script, after other variable declarations
 let buttonClickSound = new Audio('sounds/buttonclick.opus');
-let criticalWarningSound = new Audio('sounds/bip.opus');
+let criticalWarningSound = new Audio('sounds/multibip.opus');
 
 // Modify the existing click handler to play sound
 document.querySelectorAll('.control-option').forEach(option => {
@@ -39,18 +39,55 @@ const scanLine = document.querySelector('.scan-line');
 
 // Function to update scan line color based on Target Select
 function updateScanLineColor(targetSelect) {
+  const scanLine = document.querySelector('.scan-line');
+  
   switch(targetSelect) {
     case "INFRA RED":
       scanLine.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+      scanLine.style.display = 'block'; // Ensure visible
       break;
     case "UV":
       scanLine.style.backgroundColor = 'rgba(138, 43, 226, 0.3)'; // Violet color
+      scanLine.style.display = 'block'; // Ensure visible
       break;
     default: // MULTI SPEC
       scanLine.style.backgroundColor = 'rgba(255, 255, 0, 0.3)'; // Yellow (default)
+      scanLine.style.display = 'block'; // Ensure visible
       break;
   }
 }
+
+
+// Function to handle Spectral Profile selection
+function handleSpectralProfileSelection() {
+  document.querySelectorAll('#spectral-profile-options .control-option').forEach(option => {
+    option.addEventListener('click', function() {
+      const spectralProfile = this.getAttribute('data-value');
+      const scanLine = document.querySelector('.scan-line');
+      
+      // Toggle scan line visibility based on selection
+      if (spectralProfile === "INERT") {
+        scanLine.style.display = 'none'; // Hide scan line
+      } else if (spectralProfile === "BIO") {
+        scanLine.style.display = 'block'; // Show scan line
+        
+        // Apply current color based on target select
+        const currentTargetSelect = document.querySelector('#target-select-options .selected').getAttribute('data-value');
+        updateScanLineColor(currentTargetSelect);
+      }
+    });
+  });
+}
+
+// Call the new function to initialize event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize existing audio elements
+  /* ... existing code ... */
+  
+  // Initialize the spectral profile handlers
+  handleSpectralProfileSelection();
+});
+
 
 // System variables
 let rounds = 500;
@@ -377,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (!document.getElementById('critical-warning-sound')) {
     const criticalSoundElement = document.createElement('audio');
     criticalSoundElement.id = 'critical-warning-sound';
-    criticalSoundElement.src = 'sounds/bip.opus';
+    criticalSoundElement.src = 'sounds/multibip.opus';
     criticalSoundElement.preload = 'auto';
     document.body.appendChild(criticalSoundElement);
   }
