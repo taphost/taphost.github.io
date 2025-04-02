@@ -26,6 +26,7 @@ class AudioManager {
     this.sounds = {
       buttonClick: new Audio('sounds/buttonclick.opus'),
       criticalWarning: new Audio('sounds/bip.opus'),
+      gameOver: new Audio('sounds/gameover.opus'),
       // Spazio per futuri suoni
     };
     
@@ -538,6 +539,8 @@ class WeaponSystem {
     // Disattiva avviso se munizioni esaurite
     if (this.state.currentRounds <= 0) {
       this.deactivateCriticalWarning();
+      // Riproduci suono di game over
+    this.audioManager.playSound('gameOver');
     }
   }
   
