@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Generatore di Password Sicure - Mobile</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a202c;
+            --secondary: #2d3748;
+            --accent: #3182ce;
+            --success: #38a169;
+            --warning: #d69e2e;
+            --danger: #e53e3e;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            --text-primary: #1a202c;
+            --text-secondary: #2d3748;
+            --text-contrast: #ffffff;
+            --entropy-bg: rgba(45, 55, 72, 0.15);
+            --entropy-active: rgba(49, 130, 206, 0.2);
+            --blur: blur(16px);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 12px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.3) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: calc(100vh - 24px);
+        }
+        
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--glass-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+        }
+        
+        .header {
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: var(--blur);
+            margin-bottom: 0;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .header .subtitle {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .password-section {
+            padding: 16px;
+            position: sticky;
+            top: 80px;
+            z-index: 99;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: var(--blur);
+        }
+        
+        .password-display {
+            background: var(--primary);
+            color: var(--text-contrast);
+            border-radius: 16px;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            min-height: 64px;
+            word-break: break-all;
+            text-align: center;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            border: 3px solid var(--glass-border);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transition: var(--transition);
+        }
+        
+        .password-display.generated {
+            animation: passwordGenerated 0.6s ease;
+            border-color: var(--success);
+        }
+        
+        @keyframes passwordGenerated {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); background: var(--success); }
+        }
+        
+        .entropy-zone {
+            padding: 20px;
+            min-height: 200px;
+            position: relative;
+            background: var(--entropy-bg);
+            backdrop-filter: var(--blur);
+            border-radius: 20px;
+            border: 3px dashed var(--glass-border);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            cursor: crosshair;
+            transition: var(--transition);
+        }
+        
+        .entropy-zone.active {
+            background: var(--entropy-active);
+            border-color: var(--accent);
+            border-style: solid;
+        }
+        
+        .entropy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .entropy-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid var(--text-contrast);
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        }
+        
+        .status-collecting { 
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-ready { 
+            background: var(--success);
+            box-shadow: 0 0 12px var(--success);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        
+        .entropy-instruction {
+            text-align: center;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+        
+        .entropy-progress {
+            margin-bottom: 16px;
+        }
+        
+        .entropy-progress label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--glass-border);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(49,130,206,0.5);
+        }
+        
+        .entropy-canvas {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            pointer-events: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .touch-point {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent), transparent);
+            pointer-events: none;
+            animation: touchRipple 0.6s ease-out forwards;
+            border: 2px solid var(--text-contrast);
+        }
+        
+        @keyframes touchRipple {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .seed-toggle {
+            background: linear-gradient(135deg, var(--accent), #2c5282);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: var(--text-contrast);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 2px solid transparent;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .seed-toggle:hover, .seed-toggle:active {
+            transform: translateY(-2px);
+            border-color: var(--text-contrast);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        .seed-display {
+            background: var(--primary);
+            color: var(--text-contrast);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 2px solid var(--glass-border);
+            margin-top: 12px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .controls-section {
+            padding: 16px;
+        }
+        
+        .length-control {
+            margin-bottom: 20px;
+        }
+        
+        .length-control label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-align: center;
+        }
+        
+        .slider-container {
+            position: relative;
+            margin-bottom: 12px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 20px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.2);
+            outline: none;
+            -webkit-appearance: none;
+            border: 2px solid var(--glass-border);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #2c5282);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 3px solid var(--text-contrast);
+            transition: var(--transition);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+        
+        .length-display {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: var(--primary);
+            color: var(--text-contrast);
+            padding: 16px;
+            border-radius: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            border: 2px solid var(--glass-border);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .checkboxes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            background: var(--glass-bg);
+            backdrop-filter: var(--blur);
+            padding: 14px;
+            border-radius: 16px;
+            border: 2px solid var(--glass-border);
+            transition: var(--transition);
+            cursor: pointer;
+            min-height: 60px;
+        }
+        
+        .checkbox-item:active {
+            transform: scale(0.98);
+            background: rgba(255,255,255,0.4);
+        }
+        
+        .checkbox-item input {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            flex: 1;
+        }
+        
+        .buttons-section {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 18px;
+            border: none;
+            border-radius: 16px;
+            color: var(--text-contrast);
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: var(--transition);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            border: 3px solid transparent;
+            backdrop-filter: var(--blur);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            min-height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:active::before {
+            left: 100%;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-generate {
+            background: linear-gradient(135deg, var(--success), #2f855a);
+        }
+        
+        .btn-generate:active {
+            border-color: var(--success);
+            box-shadow: 0 0 20px var(--success);
+        }
+        
+        .btn-copy {
+            background: linear-gradient(135deg, var(--warning), #b7791f);
+        }
+        
+        .btn-copy:active {
+            border-color: var(--warning);
+            box-shadow: 0 0 20px var(--warning);
+        }
+        
+        .btn-save {
+            background: linear-gradient(135deg, var(--danger), #c53030);
+        }
+        
+        .btn-save:active {
+            border-color: var(--danger);
+            box-shadow: 0 0 20px var(--danger);
+        }
+        
+        .instructions {
+            padding: 20px;
+            border-left: 6px solid var(--accent);
+        }
+        
+        .instructions h3 {
+            margin-bottom: 16px;
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+            line-height: 1.6;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .instructions strong {
+            color: var(--primary);
+            font-weight: 800;
+        }
+        
+        @media (orientation: landscape) and (max-height: 600px) {
+            .header { padding: 12px; }
+            .header h1 { font-size: 1.5rem; }
+            .entropy-zone { min-height: 120px; }
+            .instructions { display: none; }
+        }
+        
+        @media (max-width: 360px) {
+            .container { padding: 8px; }
+            .checkboxes { grid-template-columns: 1fr; }
+            .checkbox-item { min-height: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Sticky -->
+        <div class="glass-card header">
+            <h1>🔐 Secure Password</h1>
+            <div class="subtitle">Generatore Crittografico Mobile</div>
+        </div>
+        
+        <!-- Password Display Sticky -->
+        <div class="glass-card password-section">
+            <div class="password-display" id="passwordDisplay">
+                Tocca l'area entropia, poi genera la password
+            </div>
+        </div>
+        
+        <!-- Entropy Collection Zone -->
+        <div class="glass-card entropy-zone" id="entropyZone">
+            <div class="entropy-header">
+                <div class="entropy-title">
+                    🎯 Tocca qui per Entropia 
+                    <span class="status-dot status-collecting" id="statusDot"></span>
+                </div>
+                <button class="seed-toggle" id="seedToggle">Seed</button>
+            </div>
+            
+            <div class="entropy-instruction" id="entropyInstruction">
+                👆 Tocca, scorri e muovi il dito in quest'area
+            </div>
+            
+            <div class="entropy-progress">
+                <label>Sicurezza: <span id="entropyCount">0</span>/1000</label>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <div class="entropy-canvas" id="entropyCanvas"></div>
+            
+            <div class="seed-display" id="seedDisplay" style="display: none;">
+                Seed: In attesa di generazione...
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="glass-card controls-section">
+            <div class="length-control">
+                <label>Lunghezza Password</label>
+                <div class="slider-container">
+                    <input type="range" id="lengthSlider" min="8" max="64" value="16">
+                </div>
+                <div class="length-display" id="lengthDisplay">16 caratteri</div>
+            </div>
+            
+            <div class="checkboxes">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="uppercase" checked>
+                    <label for="uppercase">Maiuscole<br>(A-Z)</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="lowercase" checked>
+                    <label for="lowercase">Minuscole<br>(a-z)</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="numbers" checked>
+                    <label for="numbers">Numeri<br>(0-9)</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="specialChars" checked>
+                    <label for="specialChars">Speciali<br>(!@#$...)</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="glass-card buttons-section">
+            <button class="btn btn-generate" id="generateBtn">
+                🎲 Genera Password Sicura
+            </button>
+            <button class="btn btn-copy" id="copyBtn">
+                📋 Copia negli Appunti
+            </button>
+            <button class="btn btn-save" id="saveBtn">
+                💾 Salva File di Testo
+            </button>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="glass-card instructions">
+            <h3>🛡️ Sicurezza Avanzata</h3>
+            <ul>
+                <li><strong>Entropia Touch:</strong> I tuoi tocchi generano casualità crittografica</li>
+                <li><strong>SHA-512 Multi-Round:</strong> 10.000 iterazioni per sicurezza massima</li>
+                <li><strong>Crypto API:</strong> Combinazione con generatori hardware</li>
+                <li><strong>Zero Storage:</strong> Nessun dato salvato o trasmesso</li>
+                <li><strong>Open Source:</strong> Codice verificabile e trasparente</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            MAX_ENTROPY: 1000,
+            HASH_ROUNDS: 10000,
+            CHARSETS: {
+                uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                lowercase: 'abcdefghijklmnopqrstuvwxyz',
+                numbers: '0123456789',
+                special: '!@#$%^&*()_+-=[]{}|;:,.<>?~`'
+            }
+        };
+        
+        // DOM Elements
+        const $ = id => document.getElementById(id);
+        const elements = {
+            passwordDisplay: $('passwordDisplay'),
+            entropyZone: $('entropyZone'),
+            entropyCanvas: $('entropyCanvas'),
+            entropyInstruction: $('entropyInstruction'),
+            statusDot: $('statusDot'),
+            entropyCount: $('entropyCount'),
+            progressFill: $('progressFill'),
+            seedToggle: $('seedToggle'),
+            seedDisplay: $('seedDisplay'),
+            lengthSlider: $('lengthSlider'),
+            lengthDisplay: $('lengthDisplay'),
+            generateBtn: $('generateBtn'),
+            copyBtn: $('copyBtn'),
+            saveBtn: $('saveBtn')
+        };
+        
+        // State
+        let state = {
+            entropyData: [],
+            lastEventTime: 0,
+            currentSeed: null,
+            seedVisible: false,
+            pageLoadTime: performance.now(),
+            isCollecting: false
+        };
+        
+        // Utility functions
+        const updateText = (el, text) => el.textContent = text;
+        const vibrate = () => navigator.vibrate && navigator.vibrate(50);
+        const getTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
+        
+        // Create touch point visual effect
+        const createTouchPoint = (x, y) => {
+            const point = document.createElement('div');
+            point.className = 'touch-point';
+            point.style.left = `${x - 12}px`;
+            point.style.top = `${y - 12}px`;
+            elements.entropyCanvas.appendChild(point);
+            
+            setTimeout(() => point.remove(), 600);
+        };
+        
+        // Entropy collection optimized for touch
+        const collectEntropy = (e) => {
+            e.preventDefault();
+            
+            const currentTime = performance.now();
+            const timeDelta = currentTime - state.lastEventTime;
+            
+            if (timeDelta < 8) return; // Mobile optimized rate limiting
+            
+            const rect = elements.entropyZone.getBoundingClientRect();
+            let points = [];
+            
+            if (e.type.startsWith('touch')) {
+                Array.from(e.touches || e.changedTouches || [e]).forEach(touch => {
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+                    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+                        points.push({ x, y });
+                        createTouchPoint(x, y);
+                    }
+                });
+            } else {
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                points.push({ x, y });
+            }
+            
+            points.forEach(point => {
+                state.entropyData.push({
+                    ...point,
+                    time: currentTime,
+                    deltaTime: timeDelta,
+                    type: e.type,
+                    pressure: e.touches?.[0]?.force || 1
+                });
+            });
+            
+            state.lastEventTime = currentTime;
+            
+            if (state.entropyData.length > CONFIG.MAX_ENTROPY) {
+                state.entropyData.shift();
+            }
+            
+            updateEntropyDisplay();
+            vibrate();
+        };
+        
+        // Update entropy display with mobile optimizations
+        const updateEntropyDisplay = () => {
+            const current = state.entropyData.length;
+            const percentage = Math.min((current / CONFIG.MAX_ENTROPY) * 100, 100);
+            
+            updateText(elements.entropyCount, current);
+            elements.progressFill.style.width = `${percentage}%`;
+            
+            if (current >= CONFIG.MAX_ENTROPY) {
+                elements.statusDot.className = 'status-dot status-ready';
+                updateText(elements.entropyInstruction, '✅ Entropia sufficiente! Genera la password');
+                elements.entropyZone.classList.remove('active');
+            } else {
+                elements.statusDot.className = 'status-dot status-collecting';
+                const remaining = CONFIG.MAX_ENTROPY - current;
+                updateText(elements.entropyInstruction, `👆 Ancora ${remaining} tocchi necessari`);
+                if (state.isCollecting) {
+                    elements.entropyZone.classList.add('active');
+                }
+            }
+        };
+        
+        // Generate secure seed (same algorithm)
+        const generateSeed = () => {
+            if (state.entropyData.length < CONFIG.MAX_ENTROPY) return null;
+            
+            let entropyString = state.entropyData
+                .map(p => `${p.x.toFixed(2)}:${p.y.toFixed(2)}:${p.time.toFixed(4)}:${p.deltaTime.toFixed(4)}:${p.type}:${p.pressure || 1}`)
+                .join('|');
+            
+            entropyString += `|${performance.now() - state.pageLoadTime}:${screen.width}x${screen.height}:${navigator.userAgent.length}`;
+            
+            let hash = entropyString;
+            for (let i = 0; i < CONFIG.HASH_ROUNDS; i++) {
+                hash = CryptoJS.SHA512(hash + i + (state.currentSeed || '')).toString();
+            }
+            
+            return hash;
+        };
+        
+        // Generate password (same algorithm)
+        const generatePassword = (length, options) => {
+            const userSeed = generateSeed();
+            if (!userSeed) {
+                alert('Raccogli prima 1000/1000 punti di entropia toccando l\'area!');
+                return null;
+            }
+            
+            let charset = '';
+            Object.keys(options).forEach(key => {
+                if (options[key] && CONFIG.CHARSETS[key]) {
+                    charset += CONFIG.CHARSETS[key];
+                }
+            });
+            
+            if (!charset) {
+                alert('Seleziona almeno un tipo di carattere!');
+                return null;
+            }
+            
+            const cryptoArray = new Uint32Array(length);
+            crypto.getRandomValues(cryptoArray);
+            
+            const combinedSeed = CryptoJS.SHA512(userSeed + cryptoArray.join('')).toString();
+            state.currentSeed = combinedSeed;
+            
+            if (state.seedVisible) {
+                updateText(elements.seedDisplay, `Seed (${combinedSeed.length} chars): ${combinedSeed}`);
+            }
+            
+            let password = '';
+            for (let i = 0; i < length; i++) {
+                const seedHex = combinedSeed.substring((i * 4) % (combinedSeed.length - 4), (i * 4) % (combinedSeed.length - 4) + 4);
+                const seedNum = parseInt(seedHex, 16);
+                const cryptoNum = cryptoArray[i % cryptoArray.length];
+                const combinedIndex = (seedNum + cryptoNum) % charset.length;
+                password += charset[combinedIndex];
+            }
+            
+            return password;
+        };
+        
+        // Event Listeners
+        
+        // Entropy zone events with touch optimization
+        elements.entropyZone.addEventListener('touchstart', (e) => {
+            state.isCollecting = true;
+            collectEntropy(e);
+        }, { passive: false });
+        
+        elements.entropyZone.addEventListener('touchmove', collectEntropy, { passive: false });
+        
