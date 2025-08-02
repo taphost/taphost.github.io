@@ -14,7 +14,8 @@
         }
         
         body {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            /* Sfondo più chiaro come richiesto */
+            background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
             color: #ecf0f1;
             min-height: 100vh;
             padding: 20px;
@@ -242,7 +243,6 @@
             padding: 16px;
             border: none;
             border-radius: 12px;
-            background: linear-gradient(45deg, #34495e, #2c3e50);
             color: white;
             font-size: 1rem;
             font-weight: bold;
@@ -277,12 +277,18 @@
             transform: translateY(0px);
         }
         
-        #copy-btn {
-            background: linear-gradient(45deg, #3498db, #2980b9);
+        /* Colori pulsanti personalizzati */
+        #generateBtn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
         }
         
-        #save-btn {
-            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        #copyBtn {
+            background: linear-gradient(45deg, #f1c40f, #f39c12);
+            color: #2c3e50; /* Testo più scuro per leggibilità */
+        }
+        
+        #saveBtn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
         }
         
         .generate-instruction {
@@ -359,7 +365,7 @@
         <h1>Secure Password Generator</h1>
         
         <div class="generate-instruction">
-            🖱️ Muovi il mouse per raccogliere entropia crittografica, poi genera la password
+            🖱️ Muovi il mouse o scorri il dito sullo schermo per raccogliere entropia, poi genera la password
         </div>
         
         <div class="password-display" id="passwordDisplay">
@@ -368,7 +374,7 @@
         
         <div class="entropy-section">
             <div class="entropy-header">
-                <h3>🔐 Entropia Mouse <span class="status-indicator status-collecting" id="entropyStatus"></span></h3>
+                <h3>🔐 Entropia Utente <span class="status-indicator status-collecting" id="entropyStatus"></span></h3>
                 <button class="entropy-toggle" id="toggleEntropy">Mostra Dettagli</button>
             </div>
             
@@ -420,12 +426,12 @@
         <div class="instructions">
             <h3>🛡️ Funzionalità Avanzate:</h3>
             <ul>
-                <li><strong>Entropia Mouse:</strong> I tuoi movimenti del mouse vengono utilizzati per generare casualità crittografica reale</li>
-                <li><strong>Multi-Round Hashing:</strong> Il seed viene processato attraverso multiple iterazioni SHA-512 per massima sicurezza</li>
-                <li><strong>Crypto API:</strong> Utilizzo dell'API crittografica del browser combinata con l'entropia del mouse</li>
-                <li><strong>Seed Visuale:</strong> Puoi vedere il seed generato dai tuoi movimenti (opzionale)</li>
-                <li><strong>Indicatore Stato:</strong> Il colore dell'indicatore mostra quando hai raccolto abbastanza entropia</li>
-                <li><strong>Sicurezza Massima:</strong> Ogni password è unica grazie alla combinazione di multiple fonti di casualità</li>
+                <li><strong>Entropia Fisica:</strong> I tuoi movimenti del mouse e tocchi sullo schermo vengono usati per generare casualità crittografica.</li>
+                <li><strong>Entropia Temporale:</strong> Viene considerata la distanza temporale tra i tuoi movimenti e il momento della generazione.</li>
+                <li><strong>Multi-Round Hashing:</strong> Il seed viene processato attraverso multiple iterazioni SHA-512 per massima sicurezza.</li>
+                <li><strong>Crypto API:</strong> Utilizzo dell'API crittografica del browser combinata con l'entropia fisica e temporale.</li>
+                <li><strong>Seed Visuale:</strong> Puoi vedere il seed generato dai tuoi movimenti (opzionale).</li>
+                <li><strong>Indicatore Stato:</strong> Il colore dell'indicatore mostra quando hai raccolto abbastanza entropia.</li>
             </ul>
         </div>
     </div>
@@ -433,10 +439,8 @@
     <script>
         // Configurazione
         const MAX_ENTROPY_POINTS = 1000;
-        const MIN_ENTROPY_FOR_GENERATION = 200;
-        const HASH_ROUNDS = 10000; // Numero di round per l'hashing
+        const HASH_ROUNDS = 10000;
         
-        // Caratteri disponibili
         const charsets = {
             uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
             lowercase: 'abcdefghijklmnopqrstuvwxyz',
@@ -444,7 +448,6 @@
             special: '!@#$%^&*()_+-=[]{}|;:,.<>?~`'
         };
         
-        // Elementi DOM
         const passwordDisplay = document.getElementById('passwordDisplay');
         const lengthSlider = document.getElementById('lengthSlider');
         const lengthValue = document.getElementById('lengthValue');
@@ -457,102 +460,94 @@
         const seedDisplay = document.getElementById('seedDisplay');
         const toggleEntropy = document.getElementById('toggleEntropy');
         
-        // Stato dell'applicazione
-        let mouseEntropyData = [];
-        let lastMouseTime = 0;
+        let userEntropyData = [];
+        let lastEventTime = 0;
         let currentSeed = null;
         let seedVisible = false;
+        const pageLoadTime = performance.now();
         
-        // Aggiorna il valore visualizzato dello slider
         lengthSlider.addEventListener('input', function() {
             lengthValue.textContent = this.value;
         });
         
-        // Toggle visualizzazione seed
         toggleEntropy.addEventListener('click', function() {
             seedVisible = !seedVisible;
             seedDisplay.style.display = seedVisible ? 'block' : 'none';
             this.textContent = seedVisible ? 'Nascondi Dettagli' : 'Mostra Dettagli';
         });
         
-        // Raccoglitore di entropia dal mouse
-        function collectMouseEntropy(e) {
+        function collectEntropy(e) {
             const currentTime = performance.now();
-            const timeDelta = currentTime - lastMouseTime;
+            const timeDelta = currentTime - lastEventTime;
             
-            if (timeDelta > 10) { // Limita la frequenza di raccolta
-                const entropyPoint = {
-                    x: e.clientX,
-                    y: e.clientY,
-                    time: currentTime,
-                    deltaTime: timeDelta,
-                    pressure: e.pressure || Math.random(),
-                    movementX: e.movementX || 0,
-                    movementY: e.movementY || 0
-                };
-                
-                mouseEntropyData.push(entropyPoint);
-                lastMouseTime = currentTime;
-                
-                // Mantieni solo gli ultimi MAX_ENTROPY_POINTS punti
-                if (mouseEntropyData.length > MAX_ENTROPY_POINTS) {
-                    mouseEntropyData.shift();
-                }
-                
-                updateEntropyDisplay();
+            if (timeDelta < 10) return; // Limita la frequenza
+            
+            let point;
+            if (e.type.startsWith('touch')) {
+                const touch = e.touches[0];
+                point = { x: touch.clientX, y: touch.clientY };
+            } else {
+                point = { x: e.clientX, y: e.clientY };
             }
+            
+            const entropyPoint = {
+                ...point,
+                time: currentTime,
+                deltaTime: timeDelta,
+                type: e.type,
+            };
+            
+            userEntropyData.push(entropyPoint);
+            lastEventTime = currentTime;
+            
+            if (userEntropyData.length > MAX_ENTROPY_POINTS) {
+                userEntropyData.shift();
+            }
+            
+            updateEntropyDisplay();
         }
         
-        // Aggiorna la visualizzazione dell'entropia
         function updateEntropyDisplay() {
-            const currentEntropy = mouseEntropyData.length;
+            const currentEntropy = userEntropyData.length;
             const percentage = (currentEntropy / MAX_ENTROPY_POINTS) * 100;
             
             entropyCount.textContent = currentEntropy;
             entropyFill.style.width = percentage + '%';
             
-            // Aggiorna lo stato
-            if (currentEntropy >= MIN_ENTROPY_FOR_GENERATION) {
+            if (currentEntropy >= MAX_ENTROPY_POINTS) {
                 entropyStatus.className = 'status-indicator status-ready';
             } else {
                 entropyStatus.className = 'status-indicator status-collecting';
             }
         }
         
-        // Genera seed crittografico dai movimenti del mouse
-        function generateMouseSeed() {
-            if (mouseEntropyData.length < MIN_ENTROPY_FOR_GENERATION) {
+        function generateUserSeed() {
+            if (userEntropyData.length < MAX_ENTROPY_POINTS) {
                 return null;
             }
             
-            // Combina tutti i dati di entropia in una stringa
-            let entropyString = '';
-            mouseEntropyData.forEach(point => {
-                entropyString += `${point.x}:${point.y}:${point.time}:${point.deltaTime}:${point.pressure}:${point.movementX}:${point.movementY}|`;
-            });
+            let entropyString = userEntropyData.map(p => 
+                `${p.x}:${p.y}:${p.time.toFixed(4)}:${p.deltaTime.toFixed(4)}:${p.type}`
+            ).join('|');
             
-            // Aggiungi timestamp e dati aggiuntivi
-            entropyString += Date.now() + ':' + Math.random() + ':' + navigator.userAgent.length;
+            const timeBeforeGenerate = performance.now() - pageLoadTime;
+            entropyString += `|${timeBeforeGenerate}:${navigator.userAgent.length}`;
             
-            // Multi-round hashing per massima sicurezza
             let hash = entropyString;
             for (let i = 0; i < HASH_ROUNDS; i++) {
-                hash = CryptoJS.SHA512(hash + i.toString()).toString();
+                hash = CryptoJS.SHA512(hash + i.toString() + currentSeed).toString();
             }
             
             return hash;
         }
         
-        // Generatore di password sicuro avanzato
         function generateSecurePassword(length, options) {
-            // Genera seed dal mouse
-            const mouseSeed = generateMouseSeed();
-            if (!mouseSeed) {
-                alert('Raccogli più entropia muovendo il mouse prima di generare la password!');
+            const userSeed = generateUserSeed();
+            if (!userSeed) {
+                alert('È necessario raccogliere 1000/1000 punti di entropia. Continua a muovere il mouse o a toccare lo schermo.');
                 return null;
             }
             
-            // Costruisci il charset
             let charset = '';
             if (options.uppercase) charset += charsets.uppercase;
             if (options.lowercase) charset += charsets.lowercase;
@@ -560,49 +555,36 @@
             if (options.special) charset += charsets.special;
             
             if (charset === '') {
-                charset = charsets.lowercase; // Fallback
+                alert("Seleziona almeno un set di caratteri!");
+                return null;
             }
             
-            // Combina il seed del mouse con la crypto API del browser
             const cryptoArray = new Uint32Array(length);
             crypto.getRandomValues(cryptoArray);
             
-            // Crea un seed combinato
-            const combinedSeed = CryptoJS.SHA512(mouseSeed + cryptoArray.join('')).toString();
+            const combinedSeed = CryptoJS.SHA512(userSeed + cryptoArray.join('')).toString();
             currentSeed = combinedSeed;
             
-            // Aggiorna la visualizzazione del seed
             if (seedVisible) {
                 seedDisplay.textContent = `Seed (${combinedSeed.length} chars): ${combinedSeed}`;
             }
             
-            // Genera la password usando il seed combinato
             let password = '';
-            
             for (let i = 0; i < length; i++) {
-                // Calcola un indice sicuro per il seed
-                const seedStartIndex = (i * 2) % combinedSeed.length;
-                const seedEndIndex = Math.min(seedStartIndex + 2, combinedSeed.length);
-                const seedHex = combinedSeed.substring(seedStartIndex, seedEndIndex);
-                
-                // Converti hex in numero, con fallback se parsing fallisce
-                let seedByte = parseInt(seedHex, 16);
-                if (isNaN(seedByte)) {
-                    seedByte = i; // Fallback deterministico
-                }
-                
-                // Combina con crypto API
-                const cryptoByte = cryptoArray[i % cryptoArray.length];
-                const combinedIndex = (seedByte + cryptoByte) % charset.length;
-                
+                const seedHex = combinedSeed.substring((i * 4) % (combinedSeed.length - 4), (i * 4) % (combinedSeed.length - 4) + 4);
+                const seedNum = parseInt(seedHex, 16);
+                const cryptoNum = cryptoArray[i % cryptoArray.length];
+                const combinedIndex = (seedNum + cryptoNum) % charset.length;
                 password += charset[combinedIndex];
             }
             
             return password;
         }
         
-        // Event listeners
-        document.addEventListener('mousemove', collectMouseEntropy);
+        // Event listeners per mouse e touch
+        document.addEventListener('mousemove', collectEntropy);
+        document.addEventListener('touchmove', collectEntropy, { passive: true });
+        document.addEventListener('touchstart', collectEntropy, { passive: true });
         
         generateBtn.addEventListener('click', function() {
             const length = parseInt(lengthSlider.value);
@@ -630,23 +612,7 @@
             navigator.clipboard.writeText(passwordDisplay.textContent).then(() => {
                 const originalText = copyBtn.textContent;
                 copyBtn.textContent = '✅ Copiata!';
-                setTimeout(() => {
-                    copyBtn.textContent = originalText;
-                }, 2000);
-            }).catch(() => {
-                // Fallback per browser più vecchi
-                const textarea = document.createElement('textarea');
-                textarea.value = passwordDisplay.textContent;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                
-                const originalText = copyBtn.textContent;
-                copyBtn.textContent = '✅ Copiata!';
-                setTimeout(() => {
-                    copyBtn.textContent = originalText;
-                }, 2000);
+                setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
             });
         });
         
@@ -655,13 +621,24 @@
                 alert('Genera prima una password!');
                 return;
             }
+
+            // Messaggio di warning
+            const proceed = confirm(
+                "ATTENZIONE: Salvare le password in un file di testo non è un metodo sicuro.\n\n" +
+                "Assicurati di cancellare il file subito dopo aver copiato la password in un gestore di password sicuro.\n\n" +
+                "Vuoi procedere con il download?"
+            );
+
+            if (!proceed) {
+                return;
+            }
             
             const password = passwordDisplay.textContent;
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const seedInfo = currentSeed ? `\n\nSeed utilizzato:\n${currentSeed}` : '';
+            const seedInfo = currentSeed && seedVisible ? `\n\nSeed utilizzato:\n${currentSeed}` : '';
             const content = `Password generata: ${password}\nData: ${new Date().toLocaleString()}${seedInfo}`;
             
-            const blob = new Blob([content], { type: 'text/plain' });
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             
             const a = document.createElement('a');
@@ -676,7 +653,6 @@
             }, 100);
         });
         
-        // Inizializza l'interfaccia
         updateEntropyDisplay();
     </script>
 </body>
