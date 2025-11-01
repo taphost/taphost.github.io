@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'SPEEDY';
-    src: url('./fonts/speedy.woff2') format('woff2');
+    src: url('./fonts/Speedy.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
 }
@@ -252,3 +252,4 @@ footer {
         padding: 1.5rem;
     }
 }
+
