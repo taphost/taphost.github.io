@@ -1,13 +1,8 @@
 @font-face {
-
     font-family: 'SPEEDY';
-
-    src: url('/fonts/Speedy.woff2') format('woff2');
-
+    src: url('./fonts/speedy.woff2') format('woff2');
     font-weight: normal;
-
     font-style: normal;
-
 }
 
 /* Stile base */
@@ -19,6 +14,18 @@
     --card-bg-color: rgba(0, 255, 157, 0.05);
     --card-hover-bg-color: rgba(0, 255, 157, 0.1);
     --border-color: #00ff9d;
+}
+
+
+#particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;  /* dietro a tutto */
+    opacity: 0.9;  /* riduci per non disturbare */
 }
 
 
@@ -35,6 +42,7 @@ body {
     max-width: 1024px;
     margin: 0 auto;
     padding: 2rem;
+	
 }
 
 header {
@@ -43,6 +51,7 @@ header {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 1.5rem;
     position: relative;
+	overflow: visible;
 }
 
 h1 {
@@ -51,8 +60,9 @@ h1 {
     padding: 0;
     text-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color);
     letter-spacing: 2px;
-    animation: flicker 5s infinite;
+    animation: breathing 4s ease-in-out infinite;
 }
+
 
 .subtitle-container {
     max-width: 300px;
@@ -60,15 +70,32 @@ h1 {
     overflow: hidden;
     white-space: nowrap;
     position: relative; /* Needed for positioning the text */
+	-webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
 }
+
 
 .subtitle {
     font-size: 1rem;
-    opacity: 0.7;
-    margin-top: 0.5rem;
+    opacity: 0.8;
+    margin-top: 1.5rem;
     display: inline-block;
-    padding-left: 100%; /* Start off-screen */
-    animation: scroll-left 15s linear infinite;
+    padding-left: 100%;
+    animation: scroll-left 15s linear infinite, breathing-subtle 4s ease-in-out infinite;
+}
+
+@keyframes breathing-subtle {
+    0%, 100% { 
+        text-shadow: 
+            0 0 3px var(--primary-color), 
+            0 0 5px var(--primary-color);
+    }
+    50% { 
+        text-shadow: 
+            0 0 5px var(--primary-color), 
+            0 0 10px var(--primary-color),
+            0 0 15px var(--primary-color);
+    }
 }
 
 /* Stile griglia di link */
@@ -150,9 +177,19 @@ footer {
 }
 
 /* Animazioni */
-@keyframes flicker {
-    0%, 100% { opacity: 1; text-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color); }
-    50% { opacity: 0.8; text-shadow: 0 0 15px var(--secondary-color), 0 0 25px var(--secondary-color); }
+@keyframes breathing {
+    0%, 100% { 
+        text-shadow: 
+            0 0 10px var(--primary-color), 
+            0 0 20px var(--primary-color);
+    }
+    50% { 
+        text-shadow: 
+            0 0 20px var(--primary-color), 
+            0 0 40px var(--primary-color),
+            0 0 60px var(--primary-color),
+            0 0 80px var(--primary-color);
+    }
 }
 
 @keyframes scroll-left {
