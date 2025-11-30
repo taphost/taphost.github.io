@@ -52,9 +52,17 @@ const SHAPE_PROPORTIONS = {
 const canvas = document.getElementById('particles');
 const ctx = canvas.getContext('2d');
 let mouseX = 0.5, mouseY = 0.5, resizeTimeout;
+let viewportWidth = window.innerWidth;
+let viewportHeight = window.innerHeight;
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  viewportWidth = window.innerWidth;
+  viewportHeight = window.innerHeight;
+  canvas.style.width = `${viewportWidth}px`;
+  canvas.style.height = `${viewportHeight}px`;
+  canvas.width = viewportWidth * dpr;
+  canvas.height = viewportHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 resize();
 window.addEventListener('resize', () => {
@@ -62,8 +70,8 @@ window.addEventListener('resize', () => {
   resizeTimeout = setTimeout(resize, 100);
 });
 window.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX / window.innerWidth;
-  mouseY = e.clientY / window.innerHeight;
+  mouseX = e.clientX / viewportWidth;
+  mouseY = e.clientY / viewportHeight;
 });
 class Particle {
   constructor(firstTime = false) {
@@ -79,16 +87,16 @@ class Particle {
     this.size = minSize + Math.random() * (maxSize - minSize);
     this.color = CONFIG.colors.palette[Math.floor(Math.random() * CONFIG.colors.palette.length)];
     if (isStaticMode) {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
+      this.x = Math.random() * viewportWidth;
+      this.y = Math.random() * viewportHeight;
       this.vx = (Math.random() - 0.5) * CONFIG.physics.spawnSpeed * 0.5;
       this.vy = (Math.random() - 0.5) * CONFIG.physics.spawnSpeed * 0.5;
     } else {
       if (firstTime) {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
+        this.x = Math.random() * viewportWidth;
+        this.y = Math.random() * viewportHeight;
       } else {
-        this.x = Math.random() * canvas.width * SPAWN_WIDTH_MULTIPLIER - canvas.width * SPAWN_WIDTH_OFFSET;
+        this.x = Math.random() * viewportWidth * SPAWN_WIDTH_MULTIPLIER - viewportWidth * SPAWN_WIDTH_OFFSET;
         this.y = -Math.random() * SPAWN_MARGIN;
       }
       this.vx = (Math.random() - 0.5) * CONFIG.physics.spawnSpeed;
@@ -99,7 +107,7 @@ class Particle {
   }
   update() {
     const speedMult = CONFIG.physics.speed;
-    const mouseVx = CONFIG.mouse.tracking ? (mouseX * canvas.width - this.x) / canvas.width * CONFIG.mouse.influence : 0;
+    const mouseVx = CONFIG.mouse.tracking ? (mouseX * viewportWidth - this.x) / viewportWidth * CONFIG.mouse.influence : 0;
     this.vx += mouseVx * MOUSE_INFLUENCE_FACTOR * speedMult;
     this.vx += (Math.random() - 0.5) * CONFIG.physics.turbulence * PHYSICS_DELTA;
     this.vx += CONFIG.physics.wind * PHYSICS_DELTA;
@@ -119,7 +127,7 @@ class Particle {
         this.reset();
       }
     } else if (CONFIG.behavior.fadeMode === 'exit') {
-      if (this.y > canvas.height - FADE_EXIT_THRESHOLD || this.y < FADE_EXIT_THRESHOLD) {
+      if (this.y > viewportHeight - FADE_EXIT_THRESHOLD || this.y < FADE_EXIT_THRESHOLD) {
         this.opacity -= this.fadeSpeed * 2;
       } else if (this.opacity < 1) {
         this.opacity += this.fadeSpeed;
@@ -128,13 +136,13 @@ class Particle {
         this.reset();
       }
     }
-    if (this.y > canvas.height + SPAWN_MARGIN || this.y < -SPAWN_MARGIN) {
+    if (this.y > viewportHeight + SPAWN_MARGIN || this.y < -SPAWN_MARGIN) {
       this.reset();
     }
     const boundaryMargin = this.size * BOUNDARY_MARGIN_MULTIPLIER;
     if (this.x < -boundaryMargin) {
-      this.x = canvas.width + boundaryMargin;
-    } else if (this.x > canvas.width + boundaryMargin) {
+      this.x = viewportWidth + boundaryMargin;
+    } else if (this.x > viewportWidth + boundaryMargin) {
       this.x = -boundaryMargin;
     }
   }
@@ -210,7 +218,7 @@ class Particle {
 const particles = Array.from({ length: CONFIG.particles.count }, () => new Particle(true));
 function animate() {
   ctx.fillStyle = CONFIG.colors.background;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, viewportWidth, viewportHeight);
   particles.forEach(p => {
     p.update();
     p.draw();

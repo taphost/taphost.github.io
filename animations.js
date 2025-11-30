@@ -1,69 +1,103 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const typeContainer = document.querySelector('footer p');
-    if (!typeContainer) return;
+  const typeContainer = document.querySelector('footer p');
+  if (!typeContainer) return;
 
-    const speed = 50; // Typing speed in milliseconds
-    const originalNodes = Array.from(typeContainer.childNodes);
-    typeContainer.innerHTML = ''; // Clear the container
+  const speed = 50; // Typing speed in milliseconds
+  const originalNodes = Array.from(typeContainer.childNodes);
+  typeContainer.textContent = ''; // Clear the container safely
 
-    let parentElement = typeContainer;
+  let parentElement = typeContainer;
+  const timeouts = new Set();
+  let blinkInterval = null;
+  let cancelled = false;
 
-    async function typeWriter(nodes) {
-        for (const node of nodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                // It's an element (e.g., <b>, <i>, <br>)
-                const newElement = document.createElement(node.nodeName);
-                parentElement.appendChild(newElement);
-
-                // If the element has children, recurse
-                if (node.childNodes.length > 0) {
-                    const oldParent = parentElement;
-                    parentElement = newElement;
-                    await typeWriter(Array.from(node.childNodes));
-                    parentElement = oldParent; // Restore parent for sibling nodes
-                }
-            } else if (node.nodeType === Node.TEXT_NODE) {
-                // It's a text node, type it out
-                await typeText(node.textContent);
-            }
-        }
+  const cancelAll = () => {
+    cancelled = true;
+    timeouts.forEach(id => clearTimeout(id));
+    timeouts.clear();
+    if (blinkInterval) {
+      clearInterval(blinkInterval);
+      blinkInterval = null;
     }
+  };
 
-    function typeText(text) {
-        return new Promise(resolve => {
-            let i = 0;
-            function typeChar() {
-                if (i < text.length) {
-                    parentElement.innerHTML += text.charAt(i);
-                    i++;
-                    setTimeout(typeChar, speed);
-                } else {
-                    resolve();
-                }
-            }
-            typeChar();
+  async function typeWriter(nodes) {
+    for (const node of nodes) {
+      if (cancelled || !typeContainer.isConnected) return;
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const newElement = document.createElement(node.nodeName);
+        node.getAttributeNames().forEach(attr => {
+          newElement.setAttribute(attr, node.getAttribute(attr));
         });
+        parentElement.appendChild(newElement);
+
+        if (node.childNodes.length > 0) {
+          const oldParent = parentElement;
+          parentElement = newElement;
+          await typeWriter(Array.from(node.childNodes));
+          parentElement = oldParent;
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        await typeText(node.textContent);
+      }
     }
+  }
 
-    function addCursorAndBlink() {
-        const cursor = document.createElement('span');
-        cursor.className = 'cursor';
-        cursor.textContent = '█';
-        typeContainer.appendChild(cursor);
+  function typeText(text) {
+    return new Promise(resolve => {
+      if (cancelled || !typeContainer.isConnected) return resolve();
 
-        let blinks = 0;
-        const blinker = setInterval(() => {
-            cursor.style.visibility = (cursor.style.visibility === 'hidden' ? 'visible' : 'hidden');
-            blinks++;
-            if (blinks > 8) { // 4 full blinks
-                clearInterval(blinker);
-                cursor.remove();
-            }
-        }, 500);
-    }
+      let i = 0;
+      const textNode = document.createTextNode('');
+      parentElement.appendChild(textNode);
 
-    // Start the animation and add the cursor when it's done
-    typeWriter(originalNodes).then(() => {
-        addCursorAndBlink();
+      function typeChar() {
+        if (cancelled || !typeContainer.isConnected) {
+          return resolve();
+        }
+        if (i < text.length) {
+          textNode.textContent += text.charAt(i);
+          i++;
+          const id = setTimeout(typeChar, speed);
+          timeouts.add(id);
+        } else {
+          resolve();
+        }
+      }
+      const id = setTimeout(typeChar, speed);
+      timeouts.add(id);
     });
+  }
+
+  function addCursorAndBlink() {
+    if (cancelled || !typeContainer.isConnected) return;
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    cursor.textContent = '█';
+    typeContainer.appendChild(cursor);
+
+    let blinks = 0;
+    blinkInterval = setInterval(() => {
+      if (!cursor.isConnected) return cancelAll();
+      cursor.style.visibility = cursor.style.visibility === 'hidden' ? 'visible' : 'hidden';
+      blinks++;
+      if (blinks > 8) { // 4 full blinks
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+        cursor.remove();
+      }
+    }, 500);
+  }
+
+  const handleTeardown = () => cancelAll();
+  window.addEventListener('beforeunload', handleTeardown);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAll();
+  });
+
+  typeWriter(originalNodes).then(() => {
+    if (!cancelled) addCursorAndBlink();
+    window.removeEventListener('beforeunload', handleTeardown);
+  });
 });

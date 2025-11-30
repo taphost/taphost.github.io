@@ -1,22 +1,28 @@
 (() => {
-// ============================================================================
-// INPUT & CANVAS SETUP
-// ============================================================================
-
+// Input and canvas setup
 const Input = {
   mouse: { x: 0, y: 0 }
 };
 
-document.addEventListener("mousemove", (e) => {
-  // Use page coordinates so drawing stays aligned when the page scrolls
-  Input.mouse.x = e.pageX;
-  Input.mouse.y = e.pageY;
-});
+let pendingMouseUpdate = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+const handleMouseMove = (e) => {
+  lastMouseX = e.pageX;
+  lastMouseY = e.pageY;
+  if (pendingMouseUpdate) return;
+  pendingMouseUpdate = true;
+  requestAnimationFrame(() => {
+    // Use page coordinates so drawing stays aligned when the page scrolls
+    Input.mouse.x = lastMouseX;
+    Input.mouse.y = lastMouseY;
+    pendingMouseUpdate = false;
+  });
+};
+document.addEventListener("mousemove", handleMouseMove);
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 Object.assign(canvas.style, {
   position: "absolute", // scrolls with the page
   left: "0",
@@ -35,20 +41,40 @@ const primaryColor = (getComputedStyle(document.documentElement).getPropertyValu
 ctx.strokeStyle = primaryColor || "#00ff9d";
 ctx.lineWidth = 1;
 
+// Random lookup table to avoid repeated Math.random calls
+const RAND_LEN = 256;
+const RAND_TABLE = Array.from({ length: RAND_LEN }, () => Math.random());
+let randIndex = 0;
+const nextRandom = () => {
+  const v = RAND_TABLE[randIndex];
+  randIndex = (randIndex + 1) % RAND_LEN;
+  return v;
+};
+
+let viewportWidth = window.innerWidth;
+let viewportHeight = window.innerHeight;
+let resizeTimeout;
+let rafId = null;
 const resizeCanvas = () => {
-  canvas.width = window.innerWidth;
-  canvas.height = document.documentElement.scrollHeight;
-  // Canvas resize resets context state; reapply styling
+  const dpr = window.devicePixelRatio || 1;
+  viewportWidth = window.innerWidth;
+  viewportHeight = document.documentElement.scrollHeight;
+  canvas.style.width = `${viewportWidth}px`;
+  canvas.style.height = `${viewportHeight}px`;
+  canvas.width = viewportWidth * dpr;
+  canvas.height = viewportHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.strokeStyle = primaryColor || "#00ff9d";
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.5 / dpr;
 };
 resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+const handleResize = () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(resizeCanvas, 100);
+};
+window.addEventListener('resize', handleResize);
 
-// ============================================================================
-// MATH UTILITIES
-// ============================================================================
-
+// Math utilities
 const MathUtils = {
   // Normalize angle to [-PI, PI]
   normalizeAngle(angle) {
@@ -64,10 +90,7 @@ const MathUtils = {
   }
 };
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
+// Configuration
 const DEFAULTS = {
   range: Math.PI * 2 / 3,
   stiffness: 1.1,
@@ -160,10 +183,7 @@ const CONFIG = {
   }
 };
 
-// ============================================================================
-// SEGMENT CLASS - Forward Kinematics Chain
-// ============================================================================
-
+// Segment - forward kinematics chain
 class Segment {
   constructor(parent, length, relativeAngle, angleRange, stiffness) {
     this.isSegment = true;
@@ -211,10 +231,8 @@ class Segment {
   }
 
   draw(recursive = false) {
-    ctx.beginPath();
     ctx.moveTo(this.parent.x, this.parent.y);
     ctx.lineTo(this.x, this.y);
-    ctx.stroke();
     
     if (recursive) {
       this.children.forEach(child => child.draw(true));
@@ -240,10 +258,7 @@ class Segment {
   }
 }
 
-// ============================================================================
-// LIMB SYSTEM - Base IK System
-// ============================================================================
-
+// Limb system - base IK
 class LimbSystem {
   constructor(endEffector, chainLength, reachSpeed, creature) {
     this.endEffector = endEffector;
@@ -310,10 +325,7 @@ class LimbSystem {
   }
 }
 
-// ============================================================================
-// LEG SYSTEM - Walking Leg with Step Cycle
-// ============================================================================
-
+// Leg system - walking/step cycle
 class LegSystem extends LimbSystem {
   constructor(endEffector, chainLength, reachSpeed, creature) {
     super(endEffector, chainLength, reachSpeed, creature);
@@ -322,6 +334,7 @@ class LegSystem extends LimbSystem {
     this.goalY = endEffector.y;
     this.stepPhase = 0; // 0: planted, 1: stepping
     this.forwardProgress = 0;
+    this.creature.plantedLegs += 1;
 
     // Calculate natural reach distance
     const hipToFoot = MathUtils.distance(
@@ -353,31 +366,28 @@ class LegSystem extends LimbSystem {
       
       if (footDistance > CONFIG.leg.stepThreshold) {
         this.stepPhase = 1;
+        this.creature.plantedLegs = Math.max(0, this.creature.plantedLegs - 1);
         
         // Calculate new step target with randomization
         const targetAngle = this.swingDirection + this.rootJoint.absoluteAngle + this.swingOffset;
-        const randomOffset = (Math.random() - 0.5) * this.maxReach;
+        const randomOffset = (nextRandom() - 0.5) * this.maxReach;
         
         this.goalX = this.rootJoint.x + this.maxReach * Math.cos(targetAngle) + randomOffset;
         this.goalY = this.rootJoint.y + this.maxReach * Math.sin(targetAngle) + randomOffset;
       }
     } else if (this.stepPhase === 1) {
       // Check if foot has settled
-      const footAngle = MathUtils.angleTo(
-        this.rootJoint.x, this.rootJoint.y,
-        this.endEffector.x, this.endEffector.y
-      );
-      const footDistance = MathUtils.distance(
-        this.endEffector.x, this.endEffector.y,
-        this.rootJoint.x, this.rootJoint.y
-      );
-      
+      const footDx = this.endEffector.x - this.rootJoint.x;
+      const footDy = this.endEffector.y - this.rootJoint.y;
+      const footDistance = Math.hypot(footDx, footDy);
+      const footAngle = Math.atan2(footDy, footDx);
       const newProgress = footDistance * Math.cos(footAngle - this.rootJoint.absoluteAngle);
       const progressChange = this.forwardProgress - newProgress;
       this.forwardProgress = newProgress;
       
       if (progressChange * progressChange < CONFIG.leg.settleThreshold) {
         this.stepPhase = 0;
+        this.creature.plantedLegs += 1;
         this.goalX = this.endEffector.x;
         this.goalY = this.endEffector.y;
       }
@@ -385,15 +395,13 @@ class LegSystem extends LimbSystem {
   }
 }
 
-// ============================================================================
-// CREATURE CLASS - Main Body Controller
-// ============================================================================
-
+// Creature - main controller
 class Creature {
   constructor(x, y, angle, config) {
     this.x = x;
     this.y = y;
     this.absoluteAngle = angle;
+    this.plantedLegs = 0;
     
     this.forwardSpeed = 0;
     this.forwardAccel = config.forwardAccel;
@@ -417,9 +425,10 @@ class Creature {
     
     // Forward motion: only accelerate when legs are planted
     let acceleration = this.forwardAccel;
-    if (this.systems.length > 0) {
-      const plantedLegs = this.systems.filter(sys => sys.stepPhase === 0).length;
-      acceleration *= plantedLegs / this.systems.length;
+    if (this.systems.length > 0 && this.plantedLegs > 0) {
+      acceleration *= this.plantedLegs / this.systems.length;
+    } else if (this.systems.length > 0) {
+      acceleration = 0;
     }
     
     this.forwardSpeed += acceleration * (distance > this.forwardThreshold);
@@ -444,8 +453,10 @@ class Creature {
     // Apply movement
     this.absoluteAngle += this.rotationSpeed;
     this.absoluteAngle = MathUtils.normalizeAngle(this.absoluteAngle);
-    this.x += this.forwardSpeed * Math.cos(this.absoluteAngle);
-    this.y += this.forwardSpeed * Math.sin(this.absoluteAngle);
+    const cosAngle = Math.cos(this.absoluteAngle);
+    const sinAngle = Math.sin(this.absoluteAngle);
+    this.x += this.forwardSpeed * cosAngle;
+    this.y += this.forwardSpeed * sinAngle;
     
     // Update body segments (facing backward during update)
     this.absoluteAngle += Math.PI;
@@ -460,22 +471,26 @@ class Creature {
     const r = CONFIG.headRadius;
     const startAngle = Math.PI / 4 + this.absoluteAngle;
     const endAngle = 7 * Math.PI / 4 + this.absoluteAngle;
+    const cosStart = Math.cos(startAngle);
+    const sinStart = Math.sin(startAngle);
+    const cosEnd = Math.cos(endAngle);
+    const sinEnd = Math.sin(endAngle);
+    const cosAbs = Math.cos(this.absoluteAngle);
+    const sinAbs = Math.sin(this.absoluteAngle);
     
-    ctx.beginPath();
     ctx.arc(this.x, this.y, r, startAngle, endAngle);
     ctx.moveTo(
-      this.x + r * Math.cos(endAngle),
-      this.y + r * Math.sin(endAngle)
+      this.x + r * cosEnd,
+      this.y + r * sinEnd
     );
     ctx.lineTo(
-      this.x + r * Math.cos(this.absoluteAngle) * Math.SQRT2,
-      this.y + r * Math.sin(this.absoluteAngle) * Math.SQRT2
+      this.x + r * cosAbs * Math.SQRT2,
+      this.y + r * sinAbs * Math.SQRT2
     );
     ctx.lineTo(
-      this.x + r * Math.cos(startAngle),
-      this.y + r * Math.sin(startAngle)
+      this.x + r * cosStart,
+      this.y + r * sinStart
     );
-    ctx.stroke();
     
     if (recursive) {
       this.children.forEach(child => child.draw(true));
@@ -483,10 +498,7 @@ class Creature {
   }
 }
 
-// ============================================================================
-// APPENDAGE BUILDERS - Procedural Anatomy Generation
-// ============================================================================
-
+// Appendage builders
 function createBranches(parent, scale, config, direction) {
   let node = new Segment(
     parent,
@@ -543,14 +555,14 @@ function createTorsoBranches(parent, scale, config, direction) {
   }
 }
 
-// ============================================================================
-// CREATURE ASSEMBLY
-// ============================================================================
-
+// Creature assembly
 function assembleLizard(scale, legCount, tailSegmentCount) {
+  const margin = CONFIG.behavior.wanderMargin;
+  const spawnX = viewportWidth - margin - nextRandom() * Math.max(100, viewportWidth * 0.2);
+  const spawnY = margin + nextRandom() * Math.max(100, viewportHeight * 0.2);
   const creature = new Creature(
-    window.innerWidth / 2,
-    window.innerHeight / 2,
+    spawnX,
+    spawnY,
     0,
     {
       forwardAccel: scale * CONFIG.creature.forwardAccel,
@@ -571,11 +583,11 @@ function assembleLizard(scale, legCount, tailSegmentCount) {
   };
   const pickWanderTarget = () => {
     const margin = CONFIG.behavior.wanderMargin;
-    const safeWidth = Math.max(100, canvas.width - margin * 2);
-    const safeHeight = Math.max(100, canvas.height - margin * 2);
+    const safeWidth = Math.max(100, viewportWidth - margin * 2);
+    const safeHeight = Math.max(100, viewportHeight - margin * 2);
     return {
-      x: margin + Math.random() * safeWidth,
-      y: margin + Math.random() * safeHeight
+      x: margin + nextRandom() * safeWidth,
+      y: margin + nextRandom() * safeHeight
     };
   };
   behavior.wanderTarget = pickWanderTarget();
@@ -675,39 +687,93 @@ function assembleLizard(scale, legCount, tailSegmentCount) {
     });
   }
   
-  // Start animation loop
-  setInterval(() => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const mouseDistance = MathUtils.distance(creature.x, creature.y, Input.mouse.x, Input.mouse.y);
-    if (behavior.mode === "wander" && mouseDistance < CONFIG.behavior.chaseRadius) {
-      behavior.mode = "chase";
-    } else if (behavior.mode === "chase" && mouseDistance > CONFIG.behavior.loseRadius) {
-      behavior.mode = "wander";
-      behavior.wanderTarget = pickWanderTarget();
+  // Start animation loop with fixed timestep (CONFIG.tickMs)
+  let accumulator = 0;
+  let lastTime = performance.now();
+  const step = CONFIG.tickMs;
+
+  const loop = (now) => {
+    if (document.hidden) {
+      lastTime = now;
+      requestAnimationFrame(loop);
+      return;
     }
-    
-    let targetX;
-    let targetY;
-    if (behavior.mode === "wander") {
-      const wanderDistance = MathUtils.distance(creature.x, creature.y, behavior.wanderTarget.x, behavior.wanderTarget.y);
-      if (wanderDistance < CONFIG.behavior.wanderChangeThreshold) {
+
+    accumulator += now - lastTime;
+    lastTime = now;
+    accumulator = Math.min(accumulator, step * 4);
+
+    while (accumulator >= step) {
+      ctx.clearRect(0, 0, viewportWidth, viewportHeight);
+
+      const mouseDistance = MathUtils.distance(creature.x, creature.y, Input.mouse.x, Input.mouse.y);
+      if (behavior.mode === "wander" && mouseDistance < CONFIG.behavior.chaseRadius) {
+        behavior.mode = "chase";
+      } else if (behavior.mode === "chase" && mouseDistance > CONFIG.behavior.loseRadius) {
+        behavior.mode = "wander";
         behavior.wanderTarget = pickWanderTarget();
       }
-      targetX = behavior.wanderTarget.x;
-      targetY = behavior.wanderTarget.y;
-    } else {
-      targetX = Input.mouse.x;
-      targetY = Input.mouse.y;
+
+      let targetX;
+      let targetY;
+      if (behavior.mode === "wander") {
+        const wanderDistance = MathUtils.distance(creature.x, creature.y, behavior.wanderTarget.x, behavior.wanderTarget.y);
+        if (wanderDistance < CONFIG.behavior.wanderChangeThreshold) {
+          behavior.wanderTarget = pickWanderTarget();
+        }
+        targetX = behavior.wanderTarget.x;
+        targetY = behavior.wanderTarget.y;
+      } else {
+        targetX = Input.mouse.x;
+        targetY = Input.mouse.y;
+      }
+
+      // Skip drawing if completely outside the viewport to save work
+      const margin = CONFIG.behavior.wanderMargin;
+      if (
+        creature.x > -margin &&
+        creature.x < viewportWidth + margin &&
+        creature.y > -margin &&
+        creature.y < viewportHeight + margin
+      ) {
+        ctx.shadowColor = 'rgba(0, 255, 157, 0.35)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.beginPath();
+        creature.followTarget(targetX, targetY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      } else {
+        creature.followTarget(targetX, targetY);
+      }
+      accumulator -= step;
     }
-    
-    creature.followTarget(targetX, targetY);
-  }, CONFIG.tickMs);
+
+    rafId = requestAnimationFrame(loop);
+  };
+
+  rafId = requestAnimationFrame(loop);
 }
 
-// ============================================================================
-// INITIALIZE
-// ============================================================================
-
+// Initialize
 assembleLizard(CONFIG.creatureScale, CONFIG.legCount, CONFIG.tailSegments);
+const cleanup = () => {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  window.removeEventListener('resize', handleResize);
+  document.removeEventListener("mousemove", handleMouseMove);
+  window.removeEventListener('beforeunload', cleanup);
+  if (canvas && canvas.parentNode) {
+    canvas.parentNode.removeChild(canvas);
+  }
+  delete window.destroyCreatureOverlay;
+};
+
+window.destroyCreatureOverlay = cleanup;
+window.addEventListener('beforeunload', cleanup);
 })();
