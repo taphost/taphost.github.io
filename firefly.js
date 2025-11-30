@@ -33,6 +33,7 @@
   let mouseY = window.innerHeight / 2;
   let wingAngle = 0;
   let sparkleAngle = 0;
+  let flutterOffset = 0;
 
   // Track mouse movement
   document.addEventListener("mousemove", (e) => {
@@ -117,8 +118,12 @@
 
   // Animation loop
   function animate() {
+    // Add flutter effect
+    flutterOffset += 0.15;
+    const flutterY = Math.sin(flutterOffset) * 3;
+    
     canvas.style.left = mouseX + "px";
-    canvas.style.top = mouseY + "px";
+    canvas.style.top = (mouseY + flutterY) + "px";
     drawFirefly();
     requestAnimationFrame(animate);
   }
