@@ -29,17 +29,31 @@
   document.body.appendChild(canvas);
 
   const ctx = canvas.getContext("2d");
-  let mouseX = window.innerWidth / 2;
-  let mouseY = window.innerHeight / 2;
+  let targetX = window.innerWidth / 2;
+  let targetY = window.innerHeight / 2;
+  let mouseX = targetX;
+  let mouseY = targetY;
+  let prevMouseX = mouseX;
+  let prevMouseY = mouseY;
   let wingAngle = 0;
+  let wingSpeed = 0.8;
+  let targetWingSpeed = 0.8;
   let sparkleAngle = 0;
-  let flutterOffset = 0;
+  let rotation = 0;
 
   // Track mouse movement
   document.addEventListener("mousemove", (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
+    targetX = e.clientX;
+    targetY = e.clientY;
   });
+
+  // Detect cursor style
+  function isCursorPointer() {
+    const el = document.elementFromPoint(targetX, targetY);
+    if (!el) return false;
+    const cursor = window.getComputedStyle(el).cursor;
+    return cursor === "pointer";
+  }
 
   // Main drawing function
   function drawFirefly() {
@@ -47,6 +61,12 @@
     
     const centerX = CFG.size / 2;
     const centerY = CFG.size / 2;
+    
+    // Apply rotation transform
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(rotation);
+    ctx.translate(-centerX, -centerY);
     
     // Draw body first
     ctx.shadowBlur = 0;
@@ -61,7 +81,7 @@
     ctx.fill();
     
     // Fast-beating wings with green glow on top of body
-    wingAngle += 0.8;
+    wingAngle += wingSpeed;
     const leftWingAngle = Math.sin(wingAngle) * 1.0 - 0.4;
     const rightWingAngle = -Math.sin(wingAngle) * 1.0 + 0.4;
     
@@ -114,15 +134,38 @@
     ctx.fill();
     
     ctx.shadowBlur = 0;
+    ctx.restore();
   }
 
   // Animation loop
   function animate() {
-    // Add flutter effect
-    // flutterOffset += 0.15; // add flutterOffset to Math.sin instead of wingAngle
-    const flutterY = Math.sin(-wingAngle) * 3;
+    // Smooth mouse following with delay/acceleration
+    const easing = 0.08;
+    mouseX += (targetX - mouseX) * easing;
+    mouseY += (targetY - mouseY) * easing;
     
-    canvas.style.left = mouseX + "px";
+    // Calculate mouse direction and rotation
+    const deltaX = targetX - prevMouseX;
+    const deltaY = targetY - prevMouseY;
+    const moveAngle = Math.atan2(deltaY, deltaX);
+    const targetRotation = moveAngle * 0.15; // Rotation proportional to direction
+    
+    rotation += (targetRotation - rotation) * 0.1;
+    
+    prevMouseX = targetX;
+    prevMouseY = targetY;
+    
+    // Adjust wing speed based on cursor type
+    targetWingSpeed = isCursorPointer() ? 0 : 0.8;
+    wingSpeed += (targetWingSpeed - wingSpeed) * 0.05;
+    
+    // Add flutter effect (vertical)
+    const flutterY = Math.sin(wingAngle) * 3;
+    
+    // Add wobble effect (horizontal)
+    const wobbleX = Math.cos(wingAngle * 0.7) * 2;
+    
+    canvas.style.left = (mouseX + wobbleX) + "px";
     canvas.style.top = (mouseY + flutterY) + "px";
     drawFirefly();
     requestAnimationFrame(animate);
