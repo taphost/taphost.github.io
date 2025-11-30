@@ -1,27 +1,55 @@
-// Firefly cursor configuration
-const canvas = document.getElementById('firefly');
-const ctx = canvas.getContext('2d');
-let mouseX = 0;
-let mouseY = 0;
-let wingAngle = 0;
-let sparkleAngle = 0;
+(() => {
+  const primaryColor = (getComputedStyle(document.documentElement).getPropertyValue("--primary-color") || "#00ff9d").trim() || "#00ff9d";
 
-// Track mouse movement
-document.addEventListener('mousemove', (e) => {
+  const CFG = {
+    size: 50,
+    hideCursorSelectors: "html, body, *"
+  };
+
+  const injectStyles = () => {
+    const style = document.createElement("style");
+    style.textContent = `
+      ${CFG.hideCursorSelectors} { cursor: none !important; }
+    `;
+    document.head.appendChild(style);
+  };
+
+  injectStyles();
+
+  // Create canvas element
+  const canvas = document.createElement("canvas");
+  canvas.width = CFG.size;
+  canvas.height = CFG.size;
+  canvas.style.position = "fixed";
+  canvas.style.left = "0px";
+  canvas.style.top = "0px";
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "9999";
+  canvas.style.transform = "translate(-50%, -50%)";
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext("2d");
+  let mouseX = window.innerWidth / 2;
+  let mouseY = window.innerHeight / 2;
+  let wingAngle = 0;
+  let sparkleAngle = 0;
+
+  // Track mouse movement
+  document.addEventListener("mousemove", (e) => {
     mouseX = e.clientX;
     mouseY = e.clientY;
-});
+  });
 
-// Main drawing function
-function drawFirefly() {
-    ctx.clearRect(0, 0, 50, 50);
+  // Main drawing function
+  function drawFirefly() {
+    ctx.clearRect(0, 0, CFG.size, CFG.size);
     
-    const centerX = 25;
-    const centerY = 25;
+    const centerX = CFG.size / 2;
+    const centerY = CFG.size / 2;
     
     // Draw body first
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#2d5016';
+    ctx.fillStyle = "#2d5016";
     ctx.beginPath();
     ctx.ellipse(centerX, centerY, 3, 8, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -41,8 +69,8 @@ function drawFirefly() {
     ctx.translate(centerX - 3, centerY);
     ctx.rotate(leftWingAngle);
     ctx.shadowBlur = 8;
-    ctx.shadowColor = '#00ff9d';
-    ctx.fillStyle = 'rgba(0, 255, 157, 0.25)';
+    ctx.shadowColor = primaryColor;
+    ctx.fillStyle = primaryColor.replace(')', ', 0.25)').replace('rgb', 'rgba');
     ctx.beginPath();
     ctx.ellipse(0, 0, 7, 12, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -53,8 +81,8 @@ function drawFirefly() {
     ctx.translate(centerX + 3, centerY);
     ctx.rotate(rightWingAngle);
     ctx.shadowBlur = 8;
-    ctx.shadowColor = '#00ff9d';
-    ctx.fillStyle = 'rgba(0, 255, 157, 0.25)';
+    ctx.shadowColor = primaryColor;
+    ctx.fillStyle = primaryColor.replace(')', ', 0.25)').replace('rgb', 'rgba');
     ctx.beginPath();
     ctx.ellipse(0, 0, 7, 12, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -62,9 +90,15 @@ function drawFirefly() {
     
     // Pulsing central glow
     const glowIntensity = 0.8 + Math.sin(Date.now() * 0.01) * 0.2;
-    ctx.fillStyle = `rgba(0, 255, 157, ${glowIntensity})`;
+    
+    // Convert hex to rgba for glow
+    const r = parseInt(primaryColor.slice(1, 3), 16);
+    const g = parseInt(primaryColor.slice(3, 5), 16);
+    const b = parseInt(primaryColor.slice(5, 7), 16);
+    
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${glowIntensity})`;
     ctx.shadowBlur = 15;
-    ctx.shadowColor = '#00ff9d';
+    ctx.shadowColor = primaryColor;
     ctx.beginPath();
     ctx.arc(centerX, centerY + 5, 2.5, 0, Math.PI * 2);
     ctx.fill();
@@ -76,24 +110,31 @@ function drawFirefly() {
     const sparkleY = centerY + 3 + Math.sin(sparkleAngle) * sparkleDistance;
     const sparkleIntensity = 0.6 + Math.sin(Date.now() * 0.02) * 0.4;
     
-    ctx.fillStyle = `rgba(0, 255, 157, ${sparkleIntensity})`;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${sparkleIntensity})`;
     ctx.shadowBlur = 12;
-    ctx.shadowColor = '#00ff9d';
+    ctx.shadowColor = primaryColor;
     ctx.beginPath();
     ctx.arc(sparkleX, sparkleY, 1.5, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.shadowBlur = 0;
-}
+  }
 
-// Animation loop
-function animate() {
-    canvas.style.left = (mouseX - 25) + 'px';
-    canvas.style.top = (mouseY - 25) + 'px';
+  // Animation loop
+  function animate() {
+    canvas.style.left = mouseX + "px";
+    canvas.style.top = mouseY + "px";
     drawFirefly();
     requestAnimationFrame(animate);
-}
+  }
 
-// Start animation
-animate();
+  // Restore cursor on page unload
+  const previousCursor = document.body.style.cursor;
+  window.addEventListener("beforeunload", () => {
+    document.body.style.cursor = previousCursor;
+  });
+
+  // Start animation
+  animate();
+})();
 
