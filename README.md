@@ -1,6 +1,6 @@
 # Taphost Home
 
-This is the home page for [taphost.github.io](https://taphost.github.io), a simple landing that links to [Taphost projects on GitHub](https://github.com/taphost).
+This is the home page for [taphost.github.io](https://taphost.github.io), a simple landing that links to [taphost projects on GitHub](https://github.com/taphost).
 
 ## Structure
 ```
