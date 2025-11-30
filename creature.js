@@ -8,8 +8,9 @@ const Input = {
 };
 
 document.addEventListener("mousemove", (e) => {
-  Input.mouse.x = e.clientX;
-  Input.mouse.y = e.clientY;
+  // Use page coordinates so drawing stays aligned when the page scrolls
+  Input.mouse.x = e.pageX;
+  Input.mouse.y = e.pageY;
 });
 
 const canvas = document.createElement("canvas");
@@ -17,25 +18,32 @@ document.body.appendChild(canvas);
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 Object.assign(canvas.style, {
-  position: "absolute",
+  position: "absolute", // scrolls with the page
   left: "0",
   top: "0",
-  // Leave transparent so the page background shows through
   backgroundColor: "transparent",
   pointerEvents: "none",
-  zIndex: "1"
+  zIndex: "1",
+  width: "100%"
 });
-document.body.style.overflow = "hidden";
+// Allow vertical scroll while preventing horizontal overflow
+document.body.style.overflowX = "hidden";
+document.body.style.overflowY = "auto";
 
 const ctx = canvas.getContext("2d");
 const primaryColor = (getComputedStyle(document.documentElement).getPropertyValue("--primary-color") || "#00ff9d").trim();
 ctx.strokeStyle = primaryColor || "#00ff9d";
 ctx.lineWidth = 1;
 
-window.addEventListener('resize', () => {
+const resizeCanvas = () => {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-});
+  canvas.height = document.documentElement.scrollHeight;
+  // Canvas resize resets context state; reapply styling
+  ctx.strokeStyle = primaryColor || "#00ff9d";
+  ctx.lineWidth = 1;
+};
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // ============================================================================
 // MATH UTILITIES
