@@ -1,5 +1,5 @@
 (() => {
-  const primaryColor = (getComputedStyle(document.documentElement).getPropertyValue("--primary-color") || "#00ff9d").trim() || "#00ff9d";
+  const primaryColor = "#00ff9d";
 
   const CFG = {
     size: 50,
@@ -64,30 +64,25 @@
     const leftWingAngle = Math.sin(wingAngle) * 1.0 - 0.4;
     const rightWingAngle = -Math.sin(wingAngle) * 1.0 + 0.4;
     
-    // Convert hex to rgba for wings
-    const r = parseInt(primaryColor.slice(1, 3), 16);
-    const g = parseInt(primaryColor.slice(3, 5), 16);
-    const b = parseInt(primaryColor.slice(5, 7), 16);
-    
-    // Left wing
+    // Left wing - more transparent
     ctx.save();
     ctx.translate(centerX - 3, centerY);
     ctx.rotate(leftWingAngle);
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = primaryColor;
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.25)`;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00ff9d";
+    ctx.fillStyle = "rgba(0, 255, 157, 0.2)";
     ctx.beginPath();
     ctx.ellipse(0, 0, 7, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     
-    // Right wing
+    // Right wing - more transparent
     ctx.save();
     ctx.translate(centerX + 3, centerY);
     ctx.rotate(rightWingAngle);
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = primaryColor;
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.25)`;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00ff9d";
+    ctx.fillStyle = "rgba(0, 255, 157, 0.2)";
     ctx.beginPath();
     ctx.ellipse(0, 0, 7, 12, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -96,9 +91,9 @@
     // Pulsing central glow
     const glowIntensity = 0.8 + Math.sin(Date.now() * 0.01) * 0.2;
     
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${glowIntensity})`;
+    ctx.fillStyle = `rgba(0, 255, 157, ${glowIntensity})`;
     ctx.shadowBlur = 15;
-    ctx.shadowColor = primaryColor;
+    ctx.shadowColor = "#00ff9d";
     ctx.beginPath();
     ctx.arc(centerX, centerY + 5, 2.5, 0, Math.PI * 2);
     ctx.fill();
@@ -110,9 +105,9 @@
     const sparkleY = centerY + 3 + Math.sin(sparkleAngle) * sparkleDistance;
     const sparkleIntensity = 0.6 + Math.sin(Date.now() * 0.02) * 0.4;
     
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${sparkleIntensity})`;
+    ctx.fillStyle = `rgba(0, 255, 157, ${sparkleIntensity})`;
     ctx.shadowBlur = 12;
-    ctx.shadowColor = primaryColor;
+    ctx.shadowColor = "#00ff9d";
     ctx.beginPath();
     ctx.arc(sparkleX, sparkleY, 1.5, 0, Math.PI * 2);
     ctx.fill();
