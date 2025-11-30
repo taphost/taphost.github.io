@@ -120,7 +120,7 @@
   function animate() {
     // Add flutter effect
     // flutterOffset += 0.15; // add flutterOffset to Math.sin instead of wingAngle
-    const flutterY = Math.sin(wingAngle) * 6;
+    const flutterY = Math.sin(-wingAngle) * 6;
     
     canvas.style.left = mouseX + "px";
     canvas.style.top = (mouseY + flutterY) + "px";
