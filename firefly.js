@@ -64,13 +64,18 @@
     const leftWingAngle = Math.sin(wingAngle) * 1.0 - 0.4;
     const rightWingAngle = -Math.sin(wingAngle) * 1.0 + 0.4;
     
+    // Convert hex to rgba for wings
+    const r = parseInt(primaryColor.slice(1, 3), 16);
+    const g = parseInt(primaryColor.slice(3, 5), 16);
+    const b = parseInt(primaryColor.slice(5, 7), 16);
+    
     // Left wing
     ctx.save();
     ctx.translate(centerX - 3, centerY);
     ctx.rotate(leftWingAngle);
     ctx.shadowBlur = 8;
     ctx.shadowColor = primaryColor;
-    ctx.fillStyle = primaryColor.replace(')', ', 0.25)').replace('rgb', 'rgba');
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.25)`;
     ctx.beginPath();
     ctx.ellipse(0, 0, 7, 12, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -82,7 +87,7 @@
     ctx.rotate(rightWingAngle);
     ctx.shadowBlur = 8;
     ctx.shadowColor = primaryColor;
-    ctx.fillStyle = primaryColor.replace(')', ', 0.25)').replace('rgb', 'rgba');
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.25)`;
     ctx.beginPath();
     ctx.ellipse(0, 0, 7, 12, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -90,11 +95,6 @@
     
     // Pulsing central glow
     const glowIntensity = 0.8 + Math.sin(Date.now() * 0.01) * 0.2;
-    
-    // Convert hex to rgba for glow
-    const r = parseInt(primaryColor.slice(1, 3), 16);
-    const g = parseInt(primaryColor.slice(3, 5), 16);
-    const b = parseInt(primaryColor.slice(5, 7), 16);
     
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${glowIntensity})`;
     ctx.shadowBlur = 15;
