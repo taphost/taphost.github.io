@@ -1,7 +1,7 @@
 
 const CONFIG = {
   "particles": {
-    "count": 100,
+    "count": 60,
     "minSize": 1,
     "maxSize": 2,
     "shape": "circle",
@@ -11,7 +11,7 @@ const CONFIG = {
     "gravity": 0,
     "wind": 0,
     "spawnSpeed": 0,
-    "turbulence": 5,
+    "turbulence": 3,
     "speed": 0.5
   },
   "behavior": {
